@@ -327,7 +327,7 @@ def remove_cosmic_rays(selectFiles,batching,batch_size,average,final_file_name='
     # Return the final median array
     return x_data, median_array
 
-def data_averaging(selectFiles,average,batching, batch_size, final_file_name='-averaged_data.csv'):
+def data_averaging(selectFiles,batching, batch_size, final_file_name='PE-LH-'):
     
     fdata = selectFiles.files
     
@@ -338,7 +338,10 @@ def data_averaging(selectFiles,average,batching, batch_size, final_file_name='-a
     y_all = []
     for idx, file in enumerate(fdata):
     
-        x_data, y_data, metadata = DataReader(file_name=file).read_file()
+        # Load the lamp spectrum
+        lamp = pd.read_csv(file,sep='\t', skiprows=14, header=None,engine='python',names=['Wavelength','Intensity'])
+        x_data = lamp['Wavelength']
+        y_data = lamp['Intensity']
         y_all.append(y_data)
     
     column_vectors = [np.expand_dims(arr, axis=1) for arr in y_all]
@@ -366,12 +369,12 @@ def data_averaging(selectFiles,average,batching, batch_size, final_file_name='-a
             # Save each batch_median to a CSV file
             batch_filename = f'-batch_average_{i+1}.csv'
             total_median_data = np.column_stack((x_data, batch_average))
-            np.savetxt(os.path.join(head_i,tail_i[:-13]+batch_filename), total_median_data, delimiter=',')
+            np.savetxt(os.path.join(head_i,final_file_name+batch_filename), total_median_data, delimiter=',')
 
     
-    averaged_data = np.average(y_all, axis=1)
+    averaged_data = np.average(y_all, axis=0)
     total_average_data = np.column_stack((x_data, averaged_data))
-    np.savetxt(os.path.join(head_i,tail_i[:-13]+final_file_name), total_average_data, delimiter=',')
+    np.savetxt(os.path.join(head_i,final_file_name+"-total_average.csv"), total_average_data, delimiter=',')
     
     return x_data, averaged_data
 
@@ -429,6 +432,28 @@ def plot_meanf_data(laser_Pow, meanf_df, ax2, plot_title):
     
     return ax2
 
+def lamp_average(lamp_files):
+    
+    lampdata = lamp_files.files
+    
+    if len(lampdata) < 2:
+        print("Please select at least 2 files to average")
+        
+    head_i, tail_i = os.path.split(lampdata[0])
+    y_all = []
+    for idx, lamp_file in enumerate(lampdata):
+    
+        # Load the lamp spectrum
+        lamp = pd.read_csv(lamp_file,sep='\t', skiprows=14, header=None,engine='python',names=['Wavelength','Intensity'])
+        x_data = lamp['Wavelength']
+        y_data = lamp['Intensity']
+        y_all.append(y_data)
+    
+    averaged_data = np.average(y_all, axis=0)
+    total_average_data = np.column_stack((x_data, averaged_data))
+    np.savetxt(os.path.join(head_i,'Intensity_correction'+"-averaged_data.csv"), total_average_data, delimiter=',')
+    
+    return x_data, averaged_data
 
 def i_corr_cleaning(iFiles,do_baseline_subtraction,do_median_filtering,do_data_cleaning,do_savgol_filtering,do_conversion,do_normalize,do_peak_finding,p_order,k_size,erp,k_size_savgol,p_order_savgol):
     idata = iFiles.files
@@ -436,11 +461,11 @@ def i_corr_cleaning(iFiles,do_baseline_subtraction,do_median_filtering,do_data_c
     for i in tqdm(range(len(idata))):
         
         idata_name = idata[i]
-        print(idata_name)
+        # print(idata_name)
 
         head_i, tail_i = os.path.split(idata[i])
 
-        ixdata, iydata = DataReader(file_name=idata[i]).read_file()
+        ixdata, iydata = pd.read_csv(idata_name, skiprows =14, header=None).values.T
 
         if do_median_filtering == 'y':
             filt_idata = filter_median(iydata, k_size)
