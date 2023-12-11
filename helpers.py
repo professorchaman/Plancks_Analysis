@@ -94,6 +94,7 @@ class DataReader():
         x = data[0].to_numpy()
         y = data[1].to_numpy()
         
+        
         if ext == ".dat":
             col_len = len(data.columns)
             
