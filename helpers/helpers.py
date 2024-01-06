@@ -26,7 +26,7 @@ from peakutils.plot import plot as pplot
 
 from tqdm import tqdm
 
-import spe_read as spe  
+import Plancks_Analysis.spe_reader.spe_read as spe  
 
 ## Defining all functions
 

@@ -13,7 +13,6 @@ libraries = [
     'spe2py'
 ]
 
-
 # Check if each library is installed, and install if necessary
 for library in libraries:
     try:
@@ -43,13 +42,13 @@ from numpy.fft import fft, fftfreq, ifft
 import glob
 from tqdm import tqdm
 import pandas as pd
-import oceanopticsdatareader as oodr
-import dataprocessing as dp
+import Plancks_Analysis.ocean_optics_reader.oceanopticsdatareader as oodr
+import Plancks_Analysis.data_processing.dataprocessing as dp
 from system_response import SystemResponse
 import sys
 import tkinter as tk
 from tkinter import filedialog
-from plancks_law import PlancksLaw
+from Plancks_Analysis.plancks_law.plancks_law import PlancksLaw
 
 ## Scientific Constants
 
@@ -78,6 +77,7 @@ print("Select data files:")
 files = select_file(type='data')
 display(files)
 
+flamp = None
 if do_system_correction == 'y':
     print("\nSelect tungsten halogen (Blue Ocean optics HL2000) lamp spectrum for intensity correction \n(optional; if none is chosen, default intensity correction factor will be used): ")
     flamp = select_file(type='lamp')
@@ -139,6 +139,8 @@ for file in tqdm([files]):
     counter = counter + 1
 
     x_data, y_data = data_reader.get_ocean_optics_data(file)
+    intens_data = np.zeros_like(y_data)
+    system_response = np.zeros_like(y_data)
     
     if do_system_correction == 'y':
         sr = SystemResponse([flamp])

@@ -1,7 +1,7 @@
 import os
 import numpy as np
-from oceanopticsdatareader import OceanOpticsDataReader
-from plancks_law import PlancksLaw
+from Plancks_Analysis.ocean_optics_reader.oceanopticsdatareader import OceanOpticsDataReader
+from Plancks_Analysis.plancks_law.plancks_law import PlancksLaw
 import matplotlib.pyplot as plt
 
 class SystemResponse:
