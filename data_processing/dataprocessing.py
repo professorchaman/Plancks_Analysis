@@ -7,7 +7,7 @@ import peakutils
 from scipy import signal
 from scipy.signal import medfilt
 from scipy.interpolate import CubicSpline
-import Plancks_Analysis.ocean_optics_reader.oceanopticsdatareader as oodr
+import ocean_optics_reader.oceanopticsdatareader as oodr
 
 
 class DataProcessing:
