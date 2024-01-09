@@ -1,5 +1,19 @@
 import importlib
 import os
+import logging
+import datetime as dt
+
+today = dt.datetime.today()
+filename = f"plancks_analysis-{today.month:02d}-{today.day:02d}-{today.year}.log"
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s \t %(levelname)s \t %(message)s')
+formatter = logging.Formatter('%(asctime)s \t %(levelname)s \t %(message)s')
+logger = logging.getLogger("PLANCKS_ANALYSIS")
+
+file_handler = logging.FileHandler(filename)
+file_handler.setLevel(logging.DEBUG)
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
 
 # List of required libraries
 libraries = [
@@ -15,15 +29,16 @@ libraries = [
     'peakutils'
 ]
 
+logger.info(f"Checking library installations...")
 # Check if each library is installed, and install if necessary
 for library in libraries:
     try:
         importlib.import_module(library)
-        print(f"{library} is already installed")
     except ImportError:
-        print(f"{library} is not installed. Installing...")
+        logger.warning(f"{library} is not installed. Installing...")
         os.system(f"pip install {library}")
-        print(f"{library} installed successfully")
+        logger.info(f"{library} installed successfully")
+logger.info(f"All libraries installed successfully")
 
 # Import the required packages
 from helpers import *
@@ -51,28 +66,44 @@ import sys
 import tkinter as tk
 from tkinter import filedialog
 from plancks_law.plancks_law import PlancksLaw
-
-## Scientific Constants
+import argparse
 
 if __name__ == '__main__':
     
-    if len(sys.argv) < 3:
-        print("Please enter 'y' or 'n' for system correction and Planck's fit")
-        print("USAGE: python plancks_analysis.py <system_correction['y'/'n']> <plancks_fit['y'/'n']>")
-        sys.exit()
+    parser = argparse.ArgumentParser(description="Planck's analysis")
+    
+    parser.add_argument('--do_system_correction', type=str, choices=['y', 'n'], required=True, help="Specify 'y' or 'n' for system correction")
+    parser.add_argument('--do_planck_fit', type=str, choices=['y', 'n'], required=True, help="Specify 'y' or 'n' for Planck's fit")
+    parser.add_argument('--wvl_start', type=int, required=False, default=370, help="Specify the start wavelength for system correction in nm")
+    parser.add_argument('--wvl_end', type=int, required=False, default=920, help="Specify the end wavelength for system correction in nm")
+    parser.add_argument('--fit_start', type=int, required=False, default=400, help="Specify the start wavelength for Planck's fit in nm")
+    parser.add_argument('--fit_end', type=int, required=False, default=580, help="Specify the end wavelength for Planck's fit in nm")
+    parser.add_argument('--initial_temperature', type=int, required=False, default=1000, help="Specify the initial temperature guess in K")
+    parser.add_argument('--scale_factor', type=int, required=False, default=1e-6, help="Specify the initial scale factor guess")
+    
+    args = parser.parse_args()
+    
+    do_system_correction = args.do_system_correction
+    do_planck_fit = args.do_planck_fit
+    
+    # if len(sys.argv) < 3:
+    #     print("Please enter 'y' or 'n' for system correction and Planck's fit")
+    #     print("USAGE: python plancks_analysis.py <--do_system_correction [y/n]> <--do_plancks_fit [y/n]>")
+    #     sys.exit()
         
-    if sys.argv[1] not in ['y', 'n'] or sys.argv[2] not in ['y', 'n']:
-        print("Please enter 'y' or 'n' for system correction and Planck's fit")
-        print("USAGE: python plancks_analysis.py <system_correction['y'/'n']> <plancks_fit['y'/'n']>")
-        sys.exit()
-    else:
-        pass
+    # if sys.argv[1] not in ['y', 'n'] or sys.argv[2] not in ['y', 'n']:
+    #     print("Please enter 'y' or 'n' for system correction and Planck's fit")
+    #     print("USAGE: python plancks_analysis.py <--do_system_correction [y/n]> <--do_plancks_fit [y/n]>")
+    #     sys.exit()
+    # else:
+    #     pass
     
-    if len(sys.argv) > 3:
-        print("Too many arguments. Please enter 'y' or 'n' for system correction and Planck's fit")
-        print("USAGE: python plancks_analysis.py <system_correction['y'/'n']> <plancks_fit['y'/'n']>")
-        sys.exit()
-    
+    # if len(sys.argv) > 3:
+    #     print("Please enter 'y' or 'n' for system correction and Planck's fit")
+    #     print("USAGE: python plancks_analysis.py <--do_system_correction [y/n]> <--do_plancks_fit [y/n]>")
+    #     sys.exit()
+        
+    ## Scientific Constants
     h = 6.626e-34 #Planck's constant in Js
     heV = 4.136e-15 #Planck's constant in eVs
     c = 2.9979e8 #Speed of light in m/s
@@ -83,8 +114,8 @@ if __name__ == '__main__':
     pixelArea = (14e-6)*(200e-6); # Ocean Optics UV Vis 14um x 200um per wavelength
     # acquisitionTime = 0.5; # Acquisition time is seconds
 
-    do_system_correction = sys.argv[1] # Do system correction
-    do_planck_fit = sys.argv[2] # Do Planck's fit
+    # do_system_correction = sys.argv[1] # Do system correction
+    # do_planck_fit = sys.argv[2] # Do Planck's fit
 
     # Create a Tkinter root window (it won't be displayed)
     root = tk.Tk()
@@ -95,42 +126,40 @@ if __name__ == '__main__':
         file_path = filedialog.askopenfilename(title=f"Select the {type} file")
         return file_path
 
-    print("Select data files:")
+    logger.info("Select data files:")
     files = select_file(type='data')
-    display(files)
+    # display(files)
 
     flamp = None
     if do_system_correction == 'y':
-        print("\nSelect tungsten halogen (Blue Ocean optics HL2000) lamp spectrum for intensity correction")
+        logger.info("Select tungsten halogen lamp spectrum for system correction")
         flamp = select_file(type='lamp')
-        display(flamp)
-        print(f"Selected halogen lamp spectrum file: {flamp}")
-        print("________________________________________________________________________________________________________")
+        # display(flamp)
+        # logger.info(f"Selected halogen lamp spectrum file: {flamp}")
     else:
         pass
 
     ## Variables for Planck's fitting
-
-    acquisitionTime = 0.0007 # 500ms acquistion time
+    acquisitionTime = 0.0007 # 500ms acquisition time
 
     # do_system_correction = 'y' 
+    # do_planck_fit = 'y' # Do Planck's fit 
     do_intensity_correction = 'n'
     do_baseline_subtraction = 'n'
     do_median_filtering = 'n'
     do_data_cleaning = 'n'
-    # do_planck_fit = 'y' # Do Planck's fit 
     p_order = 5 # Polynomial order for baseline subtraction
     k_size = 3 # Kernel size for Median Filtering
     erp = -11
 
-    wvl_start = 370 # Wavelength range for correction in nm
-    wvl_end = 920 # Wavelength range for correction in nm
+    wvl_start = args.wvl_start # Wavelength range for correction in nm
+    wvl_end = args.wvl_end # Wavelength range for correction in nm
 
-    fit_start = 400 # Wavelength range for fitting in nm
-    fit_end = 580 # Wavelength range for fitting in nm
+    fit_start = args.fit_start # Wavelength range for fitting in nm
+    fit_end = args.fit_end # Wavelength range for fitting in nm
 
-    T0 = 1000 # Initial temperature guess in degrees K
-    scale_factor = 1e-6 # Scale factor for fitting
+    initial_temperature = args.initial_temperature # Initial temperature guess in degrees K
+    scale_factor = args.scale_factor # Scale factor for fitting
 
     # Create instances of the classes
     data_reader = oodr.OceanOpticsDataReader()
@@ -144,7 +173,7 @@ if __name__ == '__main__':
     # files = glob.glob(r"H:\My Data\LH_data\05102023\G4_CA-Exp_16-LH_R3-loc_1_Subt16__28**__39494.txt")
     # flamp = glob.glob(r"H:\My Data\LH_data\Intensity Correction\Intensity_correction-300ms_Subt12__20__021_cleaned.txt")
 
-    for file in tqdm([files]):
+    for file in [files]:
         # Create a figure and axes with a 2x2 grid layout
         fig, ax = plt.subplots(2, 2, figsize=(10, 10))
         fig.tight_layout(pad=3.0)
@@ -154,7 +183,7 @@ if __name__ == '__main__':
                 if line.startswith('Integration Time (sec):'):
                     integration_time = line.split(':')[1].strip()
                     acquisitionTime = float(integration_time)
-                    # print(f'Integration time: {acquisitionTime} s')
+                    logger.info(f'Integration time: {acquisitionTime} s')
 
         head, tail = os.path.split(file)
         
@@ -169,6 +198,7 @@ if __name__ == '__main__':
             x_data, y_data, intens_data, system_response = sr.correct_system_response(file, save_correction=False)
             start = np.argmin(abs(x_data[1:] - wvl_start))
             end = np.argmin(abs(x_data[1:] - wvl_end))
+            logger.info(f"Default wavelength range for system correction: {wvl_start} - {wvl_end} nm")
             # print(start, end)
             x_data = x_data[start:end]
             y_data = y_data[start:end]
@@ -218,7 +248,7 @@ if __name__ == '__main__':
             # print(x)
             start = np.argmin(abs(x_data[1:] - fit_start))
             end = np.argmin(abs(x_data[1:] - fit_end))
-            # print(start, end)
+            logger.info(f"Default wavelength range for Planck's fit: {fit_start} - {fit_end} nm")
             wa = x_data[start:end]
             cleaned_data_crop = y_spec_irr_norm[start:end]
 
@@ -226,27 +256,30 @@ if __name__ == '__main__':
             plancks_law = PlancksLaw()
             
             # Initial temperature guess in degrees K using Wien's displacement law
-            T0 = (29*1e5)/(wa[np.argmax(cleaned_data_crop)]+100)
-            # T0 = 2413.31 # Initial temperature guess in degrees K
+            initial_temperature = (29*1e5)/(wa[np.argmax(cleaned_data_crop)]+100)
+            # initial_temperature = 2413.31 # Initial temperature guess in degrees K
+            logger.info(f"Initial temperature guess: {initial_temperature:.2f} K")
             
-            scale_factor = max(cleaned_data_crop) / max(plancks_law.calculate_spectral_irradiance(wa, 1, T0)) # Scale factor guess for fitting
+            scale_factor = max(cleaned_data_crop) / max(plancks_law.calculate_spectral_irradiance(wa, 1, initial_temperature)) # Scale factor guess for fitting
             # scale_factor = 1e3 # Scale factor for fitting
+            logger.info(f"Initial scale factor guess: {scale_factor:.2f}")
             
             try: # Try to fit the data to the blackbody radiation function
-                fit_params, _ = curve_fit(plancks_law.calculate_spectral_irradiance, wa, cleaned_data_crop, p0=[scale_factor, T0])
+                fit_params, _ = curve_fit(plancks_law.calculate_spectral_irradiance, wa, cleaned_data_crop, p0=[scale_factor, initial_temperature])
                 # Extract the fitted parameters
                 fitted_scale_factor, fitted_temperature = fit_params
-
+                logger.info(f"Fitted temperature: {fitted_temperature:.2f} K")
+                logger.info(f"Fitted scale factor: {fitted_scale_factor:.2f}")
                 # get the best fitting parameter values and their 1 sigma errors
                 # (assuming the parameters aren't strongly correlated).
 
                 ybest = plancks_law.calculate_spectral_irradiance(wa, fitted_scale_factor ,fitted_temperature)
-                yblack = plancks_law.calculate_spectral_irradiance(wa, fitted_scale_factor ,T0)
+                yblack = plancks_law.calculate_spectral_irradiance(wa, fitted_scale_factor ,initial_temperature)
                 
                 # plot the solution
                 ax[1, 1].set_title(f"Planck's Fitting")
                 ax[1, 1].scatter(wa, cleaned_data_crop/max(cleaned_data_crop), label='Intensity corrected data', s=10, c='k', marker='x')
-                ax[1, 1].plot(wa,yblack/max(yblack),label=f'Input Temperature {T0:.2f} K')
+                ax[1, 1].plot(wa,yblack/max(yblack),label=f'Input Temperature {initial_temperature:.2f} K')
                 ax[1, 1].plot(wa, ybest/max(ybest), ls= '--',label=f'Best fitting model {fitted_temperature:.2f} K')
                 ax[1, 1].set_xlabel("Wavelength (nm)")
                 ax[1, 1].set_ylabel("Intensity (a.u.)")
@@ -255,7 +288,7 @@ if __name__ == '__main__':
                 df_1.loc[counter] = [tail, fitted_scale_factor, fitted_temperature]
                 
             except RuntimeError: # If the fit fails, print an error message
-                print(f"Error - curve_fit failed for {tail}")
+                logger.warning(f"Error - curve_fit failed for {tail}")
                 ax[1, 1].annotate("Planck's fit failed", xy=(0.5, 0.5), xycoords='axes fraction', ha='center', va='center')
                 continue
             
