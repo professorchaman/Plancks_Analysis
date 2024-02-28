@@ -77,7 +77,7 @@ if __name__ == '__main__':
     parser.add_argument('--wvl_start', type=int, required=False, default=370, help="Specify the start wavelength for system correction in nm")
     parser.add_argument('--wvl_end', type=int, required=False, default=920, help="Specify the end wavelength for system correction in nm")
     parser.add_argument('--fit_start', type=int, required=False, default=400, help="Specify the start wavelength for Planck's fit in nm")
-    parser.add_argument('--fit_end', type=int, required=False, default=580, help="Specify the end wavelength for Planck's fit in nm")
+    parser.add_argument('--fit_end', type=int, required=False, default=430, help="Specify the end wavelength for Planck's fit in nm")
     parser.add_argument('--initial_temperature', type=int, required=False, default=1000, help="Specify the initial temperature guess in K")
     parser.add_argument('--scale_factor', type=int, required=False, default=1e-6, help="Specify the initial scale factor guess")
     
@@ -256,15 +256,20 @@ if __name__ == '__main__':
             plancks_law = PlancksLaw()
             
             # Initial temperature guess in degrees K using Wien's displacement law
-            initial_temperature = (29*1e5)/(wa[np.argmax(cleaned_data_crop)]+100)
-            # initial_temperature = 2413.31 # Initial temperature guess in degrees K
+            # initial_temperature = (29*1e5)/(wa[np.argmax(cleaned_data_crop)]+100)
+            initial_temperature = 2600.00 # Initial temperature guess in degrees K
             logger.info(f"Initial temperature guess: {initial_temperature:.2f} K")
             
-            scale_factor = max(cleaned_data_crop) / max(plancks_law.calculate_spectral_irradiance(wa, 1, initial_temperature)) # Scale factor guess for fitting
+            # scale_factor = max(cleaned_data_crop) / max(plancks_law.calculate_spectral_irradiance(wa, 1, initial_temperature)) # Scale factor guess for fitting
+            scale_factor = 1e6
             # scale_factor = 1e3 # Scale factor for fitting
             logger.info(f"Initial scale factor guess: {scale_factor:.2f}")
             
             try: # Try to fit the data to the blackbody radiation function
+                
+                # Clean the data by removing NaNs and Infs (no function in my code to do this)
+                cleaned_data_crop = np.nan_to_num(cleaned_data_crop, nan=0, posinf=0, neginf=0)
+                
                 fit_params, _ = curve_fit(plancks_law.calculate_spectral_irradiance, wa, cleaned_data_crop, p0=[scale_factor, initial_temperature])
                 # Extract the fitted parameters
                 fitted_scale_factor, fitted_temperature = fit_params
