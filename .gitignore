@@ -3,3 +3,6 @@ __pychache__
 *.cpython
 *.csv
 *.log
+/build
+/dist
+*.spec
